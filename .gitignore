@@ -17,6 +17,8 @@ dist/
 
 # Uploads and processed images
 uploads/
+fastapi_backend/uploads/
+
 vertexAI.js
 
 # Logs
@@ -51,7 +53,7 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+
 
 # IDE files
 .vscode/
@@ -71,9 +73,25 @@ Thumbs.db
 
 # Temporary files
 tmp/
-temp/           
+temp/
 
+# Testing files
+test*.js
+test*.py
+*test*.js
+*test*.py
 
-#markdown files
+# Shell scripts
+*.sh
+
+# Markdown files
 *.md
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 

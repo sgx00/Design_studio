@@ -89,30 +89,56 @@ class AIDesignGenerator {
     try {
       console.log(`Generating final image from flat using VertexAI Gemini: ${flatImagePath}`);
       
-      const { style = 'casual', color = 'blue', material = 'cotton' } = options;
+      const { 
+        style = 'casual', 
+        color = 'blue', 
+        material = 'cotton',
+        textPrompt = '',
+        fabricImagePaths = []
+      } = options;
       
       // Read the flat image file
       const imageBuffer = fs.readFileSync(flatImagePath);
       const base64Image = imageBuffer.toString('base64');
       
       // Prepare the prompt for Gemini
-      const prompt = this.buildPrompt(style, color, material);
-      
+      const prompt = this.buildPrompt(style, color, material, textPrompt, fabricImagePaths);
+      console.log('Prompt:', prompt);
       // Prepare the image data for VertexAI
-      const imageData = {
+      const parts = [];
+      
+      // Add flat image
+      parts.push({
         inlineData: {
           mimeType: 'image/png',
           data: base64Image
         }
-      };
+      });
       
-      const textData = { text: prompt };
+      // Add fabric images if provided
+      for (const fabricPath of fabricImagePaths) {
+        try {
+          const fabricBuffer = fs.readFileSync(fabricPath);
+          const fabricBase64 = fabricBuffer.toString('base64');
+          parts.push({
+            inlineData: {
+              mimeType: 'image/png',
+              data: fabricBase64
+            }
+          });
+        } catch (error) {
+          console.warn(`Could not read fabric image ${fabricPath}:`, error);
+        }
+      }
+      
+      // Add text prompt
+      parts.push({ text: prompt });
       
       // Create the request for VertexAI
       const req = {
         model: this.model,
         contents: [
-          { role: 'user', parts: [imageData, textData] }
+          { role: 'user', parts: parts }
         ],
         config: this.generationConfig,
       };
@@ -120,21 +146,23 @@ class AIDesignGenerator {
       console.log('Sending request to VertexAI Gemini...');
       
       // Generate content using VertexAI
-      const streamingResp = await this.ai.models.generateContentStream(req);
-      
+      const response = await this.ai.models.generateContent(req);
+      console.log('Received response from VertexAI Gemini:', response);
       let generatedImageBuffer = null;
       let responseText = '';
       
-      for await (const chunk of streamingResp) {
-        if (chunk.text) {
-          responseText += chunk.text;
-          console.log('Received text response:', chunk.text);
-        } else if (chunk.image) {
-          // Handle image response
-          generatedImageBuffer = chunk.image;
-          console.log('Received image response from Gemini');
-        } else {
-          console.log('Received chunk:', JSON.stringify(chunk));
+      // Parse the response to extract image data
+      if (response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            // Extract image buffer from base64 data
+            generatedImageBuffer = Buffer.from(part.inlineData.data, "base64");
+            console.log('Successfully extracted image buffer from Gemini response');
+          } else if (part.text) {
+            // Extract text response
+            responseText = part.text;
+            console.log('Text response from Gemini:', responseText);
+          }
         }
       }
       
@@ -156,7 +184,7 @@ class AIDesignGenerator {
     }
   }
 
-  buildPrompt(style, color, material) {
+  buildPrompt(style, color, material, textPrompt = '', fabricImagePaths = []) {
     const styleDescriptions = {
       casual: 'casual, relaxed, everyday wear',
       formal: 'formal, elegant, professional',
@@ -179,30 +207,118 @@ class AIDesignGenerator {
       gray: 'neutral gray color'
     };
 
-    return `Transform this flat technical drawing of a garment into a realistic, high-quality final product image. 
+    let basePrompt = `Transform this flat technical drawing of a garment into a realistic, high-quality final product image. 
 
-Requirements:
-- Style: ${styleDescriptions[style]}
-- Material: ${materialDescriptions[material]}
-- Color: ${colorDescriptions[color]}
+Requirements:`;
+
+    // Add style requirement only if not "none"
+    if (style !== 'none') {
+      basePrompt += `\n- Style: ${styleDescriptions[style]}`;
+    }
+
+    // Add material requirement only if not "none"
+    if (material !== 'none') {
+      basePrompt += `\n- Material: ${materialDescriptions[material]}`;
+    }
+
+    // Add color requirement only if not "none"
+    if (color !== 'none') {
+      basePrompt += `\n- Color: ${colorDescriptions[color]}`;
+    }
+
+    // Add fabric image guidance if provided
+    if (fabricImagePaths && fabricImagePaths.length > 0) {
+      basePrompt += `\n- Fabric References: ${fabricImagePaths.length} fabric sample(s) provided for texture and pattern reference`;
+      if (fabricImagePaths.length === 1) {
+        basePrompt += `\n  * Use the fabric image provided as the primary texture reference`;
+      } else if (fabricImagePaths.length === 2) {
+        basePrompt += `\n  * Use the second images which is a fabric image as the primary texture reference`;
+        basePrompt += `\n  * Use the third image which is also a fabric image for accent details or secondary elements`;
+
+      } 
+    }
+
+    // Add custom design guidance if provided
+    if (textPrompt && textPrompt.trim()) {
+      basePrompt += `\n- Custom Design Guidance: ${textPrompt}`;
+    }
+
+    basePrompt += `
 
 Please create a photorealistic rendering that:
 1. Maintains the exact proportions and structure of the original flat drawing
-2. Adds realistic 3D depth and dimensionality
-3. Applies appropriate ${material} texture and ${color} color
-4. Includes realistic lighting and shadows for a ${style} aesthetic
-5. Shows the garment as if it's being worn or displayed naturally
-6. Has high resolution and professional quality
-7. Includes subtle details like fabric folds, stitching, and material properties
+2. Adds realistic 3D depth and dimensionality`;
 
-The output should be a single, high-quality image that looks like a professional product photograph.`;
+    // Add material and color instructions only if not "none"
+    let stepNumber = 3;
+    if (material !== 'none' && color !== 'none') {
+      basePrompt += `\n3. Applies appropriate ${material} texture and ${color} color`;
+    } else if (material !== 'none') {
+      basePrompt += `\n3. Applies appropriate ${material} texture`;
+    } else if (color !== 'none') {
+      basePrompt += `\n3. Applies appropriate ${color} color`;
+    } else if (fabricImagePaths && fabricImagePaths.length > 0) {
+      basePrompt += `\n3. Uses and applies the provided fabric sample as the primary texture and pattern reference for the garment`;
+      stepNumber = 4;
+    }
+    else {
+      basePrompt += `\n3. Uses appropriate materials and colors based on the garment design`;
+    }
+
+    // Add fabric image reference instructions
+    if (fabricImagePaths && fabricImagePaths.length > 0) {
+      if (fabricImagePaths.length === 1) {
+        basePrompt += `\n4. Uses the provided fabric sample as the primary texture and pattern reference`;
+        stepNumber = 5;
+      } else if (fabricImagePaths.length === 2) {
+        basePrompt += `\n4. Uses the first fabric sample as the primary texture and pattern reference`;
+        basePrompt += `\n5. Incorporates the second fabric sample for accent details, pockets, or secondary elements`;
+        stepNumber = 6;
+      } 
+    } else {
+      stepNumber = 4;
+    }
+    
+
+    // Add final rendering instructions
+    basePrompt += `
+${stepNumber}. Includes realistic lighting and shadows${style !== 'none' ? ` for a ${style} aesthetic` : ''}
+${stepNumber + 1}. Has high resolution and professional quality
+${stepNumber + 2}. Includes subtle details like fabric folds, stitching, and material properties
+${stepNumber + 3}. Ensure the garment is displayed in a natural way and the background is white and the garment is centered`;
+
+
+    
+
+    basePrompt += `\n\nThe output should be a single, high-quality image that looks like a professional product photograph.`;
+
+    // Add final fabric usage instructions
+    if (fabricImagePaths && fabricImagePaths.length > 0) {
+      basePrompt += `\n\nIMPORTANT: Pay close attention to the fabric sample images provided. Use their textures, patterns, and visual characteristics to create a realistic representation of how the garment would look with those specific fabrics.`;
+      if (fabricImagePaths.length > 1) {
+        basePrompt += ` When multiple fabric samples are provided, blend them harmoniously to generate a realistic representation of how the flat design garment would look with those specific fabrics.`;
+      }
+    }
+
+    return basePrompt;
   }
 
   async generateFinalImageFallback(flatImagePath, outputPath, options = {}) {
     try {
       console.log(`Using fallback processing for: ${flatImagePath}`);
       
-      const { style = 'casual', color = 'blue', material = 'cotton' } = options;
+      const { 
+        style = 'casual', 
+        color = 'blue', 
+        material = 'cotton',
+        textPrompt = '',
+        fabricImagePaths = []
+      } = options;
+      
+      // Use default values if "none" is selected
+      const finalStyle = style === 'none' ? 'casual' : style;
+      const finalColor = color === 'none' ? 'blue' : color;
+      const finalMaterial = material === 'none' ? 'cotton' : material;
       
       // Load the flat technical drawing
       const flatImage = await loadImage(flatImagePath);
@@ -212,6 +328,12 @@ The output should be a single, high-quality image that looks like a professional
       // Draw flat image
       ctx.drawImage(flatImage, 0, 0);
       
+      // Note: In fallback mode, text prompt and fabric images are not processed
+      // as the fallback uses traditional image processing techniques
+      if (textPrompt || fabricImagePaths.length > 0) {
+        console.log('Text prompt and fabric images are not processed in fallback mode');
+      }
+      
       // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
@@ -220,16 +342,16 @@ The output should be a single, high-quality image that looks like a professional
       const renderedData = await this.apply3DRendering(data, canvas.width, canvas.height, options);
       
       // Apply material and texture
-      const texturedData = await this.applyMaterialAndTexture(renderedData, canvas.width, canvas.height, material);
+      const texturedData = await this.applyMaterialAndTexture(renderedData, canvas.width, canvas.height, finalMaterial);
       
       // Apply color
-      const coloredData = this.applyColor(texturedData, canvas.width, canvas.height, color);
+      const coloredData = this.applyColor(texturedData, canvas.width, canvas.height, finalColor);
       
       // Apply lighting and shadows
-      const litData = this.applyLighting(coloredData, canvas.width, canvas.height, style);
+      const litData = this.applyLighting(coloredData, canvas.width, canvas.height, finalStyle);
       
       // Apply final enhancements
-      const finalData = this.applyFinalEnhancements(litData, canvas.width, canvas.height, style);
+      const finalData = this.applyFinalEnhancements(litData, canvas.width, canvas.height, finalStyle);
       
       // Convert back to canvas
       const finalCanvas = createCanvas(canvas.width, canvas.height);

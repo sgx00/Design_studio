@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import DesignWorkflow from './pages/DesignWorkflow';
 import BatchProcess from './pages/BatchProcess';
+import AIFashionAgent from './pages/AIFashionAgent';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -54,7 +55,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/design-workflow" element={<DesignWorkflow />} />
-          <Route path="/batch-process" element={<BatchProcess />} />
+          <Route path="/batch-process" element={<BatchProcess />} /> 
+          <Route path="/ai-fashion-agent" element={<AIFashionAgent />} />
         </Routes>
       </MainContent>
       <Footer />

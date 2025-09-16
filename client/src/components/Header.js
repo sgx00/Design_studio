@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { FiMenu, FiX, FiHome, FiImage, FiLayers, FiGrid, FiFolder } from 'react-icons/fi';
+import { FiMenu, FiX, FiHome, FiImage, FiGrid, FiZap } from 'react-icons/fi';
 
 const HeaderContainer = styled.header`
   position: fixed;
@@ -131,7 +131,8 @@ const Header = () => {
   const navItems = [
     { path: '/', label: 'Home', icon: <FiHome /> },
     { path: '/design-workflow', label: 'Design Workflow', icon: <FiImage /> },
-    { path: '/batch-process', label: 'Batch Process', icon: <FiGrid /> }
+    //{ path: '/batch-process', label: 'Batch Process', icon: <FiGrid /> },
+    { path: '/ai-fashion-agent', label: 'AI Fashion Agent', icon: <FiZap /> }
   ];
 
   const toggleMobileMenu = () => {

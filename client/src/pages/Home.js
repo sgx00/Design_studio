@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { FiImage, FiLayers, FiGrid, FiZap, FiTrendingUp, FiUsers } from 'react-icons/fi';
+import { FiImage, FiLayers, FiGrid, FiZap, FiTrendingUp, FiTarget } from 'react-icons/fi';
 
 const HomeContainer = styled.div`
   min-height: 100vh;
@@ -208,18 +208,18 @@ const Home = () => {
     },
     {
       icon: <FiZap />,
-      title: 'Real-time Processing',
-      description: 'Get results in seconds with our optimized AI algorithms and cloud processing.'
+      title: 'AI Fashion Agent',
+      description: 'Generate trend-based garment designs using the latest fashion insights and AI technology.'
     },
     {
       icon: <FiTrendingUp />,
-      title: 'Advanced Analytics',
-      description: 'Track your design workflow with detailed analytics and performance insights.'
+      title: 'Trend Analysis',
+      description: 'Stay ahead with real-time fashion trend analysis and market insights.'
     },
     {
-      icon: <FiUsers />,
-      title: 'Collaborative Features',
-      description: 'Share designs with your team and collaborate on projects in real-time.'
+      icon: <FiTarget />,
+      title: 'Market Intelligence',
+      description: 'Get detailed market analysis and recommendations for your designs.'
     }
   ];
 

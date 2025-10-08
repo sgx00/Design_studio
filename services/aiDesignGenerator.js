@@ -3,7 +3,6 @@ import { createCanvas, loadImage } from 'canvas';
 import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
-
 class AIDesignGenerator {
   constructor() {
     // Check if Google API key is available

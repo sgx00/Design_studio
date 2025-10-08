@@ -3,6 +3,40 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FiUpload, FiImage, FiSettings, FiDownload, FiRefreshCw, FiDroplet, FiScissors, FiTarget } from 'react-icons/fi';
 import axios from 'axios';
+import { getImageUrl } from '../utils/imageUtils';
+
+// Axios configuration for garment variation API
+const garmentApi = axios.create({
+  baseURL: 'http://localhost:3001',
+  timeout: 90000, // 90 seconds timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor for logging
+garmentApi.interceptors.request.use(
+  (config) => {
+    console.log('Making garment variation request to:', config.url);
+    return config;
+  },
+  (error) => {
+    console.error('Garment variation request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+garmentApi.interceptors.response.use(
+  (response) => {
+    console.log('Garment variation response received:', response.status);
+    return response;
+  },
+  (error) => {
+    console.error('Garment variation response error:', error.response?.status, error.response?.data);
+    return Promise.reject(error);
+  }
+);
 
 const Container = styled.div`
   min-height: 100vh;
@@ -346,7 +380,8 @@ const GarmentVariation = () => {
     pattern: 'solid',
     fit: 'regular',
     length: 'standard',
-    customPrompt: ''
+    customPrompt: '',
+    variationCount: 4
   });
 
   const variationTypes = [
@@ -414,11 +449,11 @@ const GarmentVariation = () => {
         formData.append('image', selectedImage);
         formData.append('baseColor', variationParams.style); // Using style field for base color
         formData.append('intensity', variationParams.intensity);
-        formData.append('count', Math.min(parseInt(variationParams.intensity / 20) + 2, 6));
+        formData.append('count', variationParams.variationCount);
         formData.append('style', variationParams.material); // Using material field for style
         formData.append('material', variationParams.pattern); // Using pattern field for material
 
-        response = await axios.post('/api/garment-variation/ai-color', formData, {
+        response = await garmentApi.post('/api/garment-variation/ai-color', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -429,6 +464,7 @@ const GarmentVariation = () => {
         formData.append('image', selectedImage);
         formData.append('variationType', variationParams.variationType);
         formData.append('intensity', variationParams.intensity);
+        formData.append('variationCount', variationParams.variationCount);
         formData.append('style', variationParams.style);
         formData.append('material', variationParams.material);
         formData.append('pattern', variationParams.pattern);
@@ -436,7 +472,7 @@ const GarmentVariation = () => {
         formData.append('length', variationParams.length);
         formData.append('customPrompt', variationParams.customPrompt);
 
-        response = await axios.post('/api/garment-variation/generate', formData, {
+        response = await garmentApi.post('/api/garment-variation/generate', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -580,6 +616,24 @@ const GarmentVariation = () => {
               </ControlGroup>
 
               <ControlGroup>
+                <Label>
+                  <FiTarget />
+                  Number of Variations
+                </Label>
+                <Select
+                  name="variationCount"
+                  value={variationParams.variationCount}
+                  onChange={handleInputChange}
+                >
+                  <option value={2}>2 Variations</option>
+                  <option value={3}>3 Variations</option>
+                  <option value={4}>4 Variations</option>
+                  <option value={5}>5 Variations</option>
+                  <option value={6}>6 Variations</option>
+                </Select>
+              </ControlGroup>
+
+              <ControlGroup>
                 <Label>{variationParams.variationType === 'color' ? 'Base Color' : 'Style'}</Label>
                 <Select
                   name="style"
@@ -717,13 +771,13 @@ const GarmentVariation = () => {
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
                   <ResultImage
-                    src={result.imageUrl}
+                    src={getImageUrl(result.imageUrl)}
                     alt={`Variation ${index + 1}`}
                   />
                   <ResultTitle>{result.title}</ResultTitle>
                   <ResultDescription>{result.description}</ResultDescription>
                   <DownloadButton
-                    onClick={() => handleDownload(result.imageUrl, `variation-${index + 1}.png`)}
+                    onClick={() => handleDownload(getImageUrl(result.imageUrl), `variation-${index + 1}.png`)}
                   >
                     <FiDownload />
                     Download

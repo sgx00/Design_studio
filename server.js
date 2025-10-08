@@ -1,4 +1,4 @@
-//import 'dotenv/config';
+import 'dotenv/config';
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
@@ -411,6 +411,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
     const {
       variationType = 'color',
       intensity = 50,
+      variationCount = 4,
       style = 'casual',
       material = 'cotton',
       pattern = 'solid',
@@ -422,6 +423,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
     console.log('Garment variation request:', {
       variationType,
       intensity,
+      variationCount,
       style,
       material,
       pattern,
@@ -443,7 +445,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           aiVariations = await aiDesignVariations.generateColorVariations(inputPath, outputDir, {
             baseColor: style, // Using style field for base color
             intensity: parseInt(intensity),
-            count: Math.min(parseInt(intensity / 20) + 2, 6),
+            count: parseInt(variationCount),
             style: material, // Using material field for style
             material: pattern // Using pattern field for material
           });
@@ -453,7 +455,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           aiVariations = await aiDesignVariations.generateStyleVariations(inputPath, outputDir, {
             baseStyle: style,
             intensity: parseInt(intensity),
-            count: Math.min(parseInt(intensity / 20) + 2, 6),
+            count: parseInt(variationCount),
             color: material, // Using material field for color
             material: pattern // Using pattern field for material
           });
@@ -463,7 +465,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           aiVariations = await aiDesignVariations.generateMaterialVariations(inputPath, outputDir, {
             baseMaterial: material,
             intensity: parseInt(intensity),
-            count: Math.min(parseInt(intensity / 20) + 2, 6),
+            count: parseInt(variationCount),
             color: style, // Using style field for color
             style: pattern // Using pattern field for style
           });
@@ -473,7 +475,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           aiVariations = await aiDesignVariations.generateCustomVariations(inputPath, outputDir, {
             customPrompt,
             intensity: parseInt(intensity),
-            count: Math.min(parseInt(intensity / 20) + 2, 6)
+            count: parseInt(variationCount)
           });
           break;
           
@@ -481,7 +483,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           // For pattern and fit variations, use fallback
           aiVariations = await aiDesignVariations.generateFallbackVariations(inputPath, outputDir, variationType, {
             intensity: parseInt(intensity),
-            count: Math.min(parseInt(intensity / 20) + 2, 6),
+            count: parseInt(variationCount),
             color: style,
             style: material,
             material: pattern
@@ -499,9 +501,9 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
       console.log('AI variations failed, using fallback processing:', aiError.message);
       
       // Fallback to traditional Sharp.js processing
-      const variationCount = Math.min(parseInt(intensity / 20) + 2, 6);
+      const fallbackVariationCount = parseInt(variationCount);
       
-      for (let i = 0; i < variationCount; i++) {
+      for (let i = 0; i < fallbackVariationCount; i++) {
         try {
           const outputPath = path.join(uploadsDir, `variation-${uuidv4()}.png`);
           
@@ -509,7 +511,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
           let variationResult;
           switch (variationType) {
             case 'color':
-              variationResult = await generateColorVariation(inputPath, outputPath, i, variationCount);
+              variationResult = await generateColorVariation(inputPath, outputPath, i, fallbackVariationCount);
               break;
             case 'style':
               variationResult = await generateStyleVariation(inputPath, outputPath, style, i);
@@ -527,7 +529,7 @@ app.post('/api/garment-variation/generate', upload.single('image'), async (req, 
               variationResult = await generateCustomVariation(inputPath, outputPath, customPrompt, i);
               break;
             default:
-              variationResult = await generateColorVariation(inputPath, outputPath, i, variationCount);
+              variationResult = await generateColorVariation(inputPath, outputPath, i, fallbackVariationCount);
           }
 
           variations.push({

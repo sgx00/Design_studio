@@ -6,13 +6,28 @@ import { GoogleGenAI } from '@google/genai';
 
 class AIDesignGenerator {
   constructor() {
-    // Initialize VertexAI with your Cloud project and location
-    this.ai = new GoogleGenAI({
-      vertexai: true,
-      project: 'garment-design-ai-2025',
-      location: 'global'
-    });
-    this.model = 'gemini-2.5-flash-image-preview';
+    // Check if Google API key is available
+    if (!process.env.GOOGLE_API_KEY) {
+      console.warn('Warning: GOOGLE_API_KEY environment variable is not set. AI design generation will not work.');
+      this.ai = null;
+      this.model = 'gemini-2.5-flash-image-preview';
+      return;
+    }
+
+    try {
+      // Initialize VertexAI with your Cloud project and location
+      // this.ai = new GoogleGenAI({
+      //   vertexai: true,
+      //   project: 'garment-design-ai-2025',
+      //   location: 'global'
+      // });
+      this.ai = new GoogleGenAI(process.env.GOOGLE_API_KEY);
+      this.model = 'gemini-2.5-flash-image-preview';
+    } catch (error) {
+      console.error('Error initializing GoogleGenAI:', error.message);
+      this.ai = null;
+      this.model = 'gemini-2.5-flash-image-preview';
+    }
 
     // Set up generation config
     this.generationConfig = {
@@ -23,35 +38,19 @@ class AIDesignGenerator {
       safetySettings: [
         {
           category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'OFF',
+          threshold: 'BLOCK_NONE',
         },
         {
           category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'OFF',
+          threshold: 'BLOCK_NONE',
         },
         {
           category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'OFF',
+          threshold: 'BLOCK_NONE',
         },
         {
           category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'OFF',
-        },
-        {
-          category: 'HARM_CATEGORY_IMAGE_HATE',
-          threshold: 'OFF',
-        },
-        {
-          category: 'HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT',
-          threshold: 'OFF',
-        },
-        {
-          category: 'HARM_CATEGORY_IMAGE_HARASSMENT',
-          threshold: 'OFF',
-        },
-        {
-          category: 'HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT',
-          threshold: 'OFF',
+          threshold: 'BLOCK_NONE',
         }
       ],
     };
@@ -88,6 +87,11 @@ class AIDesignGenerator {
   async generateFinalImage(flatImagePath, outputPath, options = {}) {
     try {
       console.log(`Generating final image from flat using VertexAI Gemini: ${flatImagePath}`);
+      
+      // Check if AI client is available
+      if (!this.ai) {
+        throw new Error('Google AI client is not initialized. Please check your GOOGLE_API_KEY environment variable.');
+      }
       
       const { 
         style = 'casual', 

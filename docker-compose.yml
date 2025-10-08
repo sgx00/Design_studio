@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./fastapi_backend/uploads:/app/fastapi_backend/uploads
+    env_file:
+      - ./.env

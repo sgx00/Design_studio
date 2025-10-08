@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { FiImage, FiLayers, FiGrid, FiZap, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import { FiImage, FiLayers, FiGrid, FiZap, FiTrendingUp, FiTarget, FiRefreshCw } from 'react-icons/fi';
 
 const HomeContainer = styled.div`
   min-height: 100vh;
@@ -220,6 +220,11 @@ const Home = () => {
       icon: <FiTarget />,
       title: 'Market Intelligence',
       description: 'Get detailed market analysis and recommendations for your designs.'
+    },
+    {
+      icon: <FiRefreshCw />,
+      title: 'Garment Variations',
+      description: 'Create multiple style variations of your garments with different colors, materials, and patterns.'
     }
   ];
 
@@ -255,7 +260,7 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            Transform Your Design Workflow with AI
+            StyleSynapse.ai - Transform Your Design Workflow
           </HeroTitle>
           <HeroSubtitle
             initial={{ opacity: 0, y: 30 }}
@@ -263,7 +268,7 @@ const Home = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             Convert product images to technical flats and generate realistic final renders 
-            with our advanced AI-powered design platform.
+            with StyleSynapse.ai's advanced neural network-powered design platform.
           </HeroSubtitle>
           <CTAButton
             to="/design-workflow"

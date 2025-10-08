@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { FiMenu, FiX, FiHome, FiImage, FiGrid, FiZap } from 'react-icons/fi';
+import { FiMenu, FiX, FiHome, FiImage, FiGrid, FiZap, FiRefreshCw } from 'react-icons/fi';
 
 const HeaderContainer = styled.header`
   position: fixed;
@@ -32,11 +32,26 @@ const Logo = styled(Link)`
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   
   &:hover {
     color: #764ba2;
   }
+`;
+
+const LogoImage = styled.img`
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+`;
+
+const LogoText = styled.span`
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 `;
 
 const NavLinks = styled.div`
@@ -132,7 +147,8 @@ const Header = () => {
     { path: '/', label: 'Home', icon: <FiHome /> },
     { path: '/design-workflow', label: 'Design Workflow', icon: <FiImage /> },
     //{ path: '/batch-process', label: 'Batch Process', icon: <FiGrid /> },
-    { path: '/ai-fashion-agent', label: 'AI Fashion Agent', icon: <FiZap /> }
+    { path: '/ai-fashion-agent', label: 'AI Fashion Agent', icon: <FiZap /> },
+    { path: '/garment-variation', label: 'Garment Variations', icon: <FiRefreshCw /> }
   ];
 
   const toggleMobileMenu = () => {
@@ -143,8 +159,8 @@ const Header = () => {
     <HeaderContainer>
       <Nav>
         <Logo to="/">
-          <FiImage />
-           AI Design Studio
+          {/* <LogoImage src="/logo_.png" alt="StyleSynapse.ai Logo" /> */}
+          <LogoText>StyleSynapse</LogoText>
         </Logo>
         
         <NavLinks>

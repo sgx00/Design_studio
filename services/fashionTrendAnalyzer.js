@@ -10,7 +10,7 @@ class FashionTrendAnalyzer {
       project: 'garment-design-ai-2025',
       location: 'global'
     });
-    this.model = 'gemini-2.0-flash-exp';
+    this.model = 'gemini-2.5-flash';
 
     // API Configuration - Load from configuration file
     this.apiKeys = {

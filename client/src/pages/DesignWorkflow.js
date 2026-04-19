@@ -1,16 +1,19 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
-import { FiUpload, FiImage, FiLayers, FiDownload, FiRefreshCw, FiSettings, FiArrowRight, FiX } from 'react-icons/fi';
+import { FiUpload, FiImage, FiLayers, FiDownload, FiRefreshCw, FiSettings, FiArrowRight, FiX, FiVideo } from 'react-icons/fi';
 import api from '../config/axios';
+import axios from 'axios';
 import { getImageUrl } from '../utils/imageUtils';
+
+const fastapi = axios.create({ baseURL: 'http://localhost:8000', timeout: 30000 });
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #f8f9fa;
-  padding: 1rem 0;
+  background: #F8F9FE;
+  padding: 2rem 0 3rem;
 `;
 
 const Container = styled.div`
@@ -21,16 +24,17 @@ const Container = styled.div`
 
 const PageTitle = styled.h1`
   text-align: center;
-  font-size: 2rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  color: #333;
+  color: #2D3436;
   margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
 `;
 
 const PageSubtitle = styled.p`
   text-align: center;
-  color: #666;
-  font-size: 1rem;
+  color: #636E72;
+  font-size: 1.05rem;
   margin-bottom: 2rem;
 `;
 
@@ -39,80 +43,82 @@ const WorkflowTabs = styled.div`
   justify-content: center;
   margin-bottom: 2rem;
   background: white;
-  border-radius: 8px;
-  padding: 0.25rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 500px;
+  border-radius: 10px;
+  padding: 0.3rem;
+  border: 1px solid #E8E6F0;
+  max-width: 460px;
   margin-left: auto;
   margin-right: auto;
 `;
 
 const TabButton = styled.button`
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.7rem 1rem;
   border: none;
-  background: ${props => props.active ? '#667eea' : 'transparent'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border-radius: 6px;
+  background: ${props => props.active ? '#6C5CE7' : 'transparent'};
+  color: ${props => props.active ? 'white' : '#636E72'};
+  border-radius: 8px;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  
+
   &:hover {
-    background: ${props => props.active ? '#667eea' : 'rgba(102, 126, 234, 0.1)'};
+    background: ${props => props.active ? '#6C5CE7' : 'rgba(108, 92, 231, 0.08)'};
+    color: ${props => props.active ? 'white' : '#6C5CE7'};
   }
 `;
 
 const WorkflowSection = styled(motion.div)`
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E8E6F0;
   margin-bottom: 1.5rem;
 `;
 
 const Dropzone = styled.div`
-  border: 2px dashed #667eea;
-  border-radius: 8px;
-  padding: 2rem;
+  border: 2px dashed ${props => props.isDragActive ? '#6C5CE7' : '#E8E6F0'};
+  border-radius: 16px;
+  padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.isDragActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
-  
+  background: ${props => props.isDragActive ? 'rgba(108, 92, 231, 0.06)' : '#FAFAFE'};
+
   &:hover {
-    border-color: #764ba2;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #A29BFE;
+    background: rgba(108, 92, 231, 0.04);
   }
 `;
 
 const UploadIcon = styled.div`
   font-size: 2.5rem;
-  color: #667eea;
+  color: #6C5CE7;
   margin-bottom: 0.75rem;
 `;
 
 const UploadText = styled.p`
-  font-size: 1.1rem;
-  color: #333;
+  font-size: 1.05rem;
+  color: #2D3436;
   margin-bottom: 0.4rem;
+  font-weight: 500;
 `;
 
 const UploadHint = styled.p`
-  color: #666;
-  font-size: 0.85rem;
+  color: #B2BEC3;
+  font-size: 0.8rem;
 `;
 
 const OptionsSection = styled(motion.div)`
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 1px solid #E8E6F0;
   margin-bottom: 1.5rem;
 `;
 
@@ -127,44 +133,48 @@ const OptionGroup = styled.div`
   label {
     display: block;
     font-weight: 600;
-    color: #333;
+    color: #2D3436;
     margin-bottom: 0.4rem;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
-  
+
   select {
     width: 100%;
-    padding: 0.6rem;
-    border: 2px solid #e9ecef;
-    border-radius: 6px;
+    padding: 0.65rem 0.75rem;
+    border: 1.5px solid #E8E6F0;
+    border-radius: 10px;
     font-size: 0.9rem;
-    transition: border-color 0.3s ease;
-    
+    transition: all 0.2s ease;
+    background: white;
+    color: #2D3436;
+    cursor: pointer;
+
     &:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: #6C5CE7;
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.08);
     }
   }
 `;
 
 const ProcessingSection = styled(motion.div)`
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 3rem 1.5rem;
+  border: 1px solid #E8E6F0;
   margin-bottom: 1.5rem;
   text-align: center;
 `;
 
 const ProcessingSpinner = styled.div`
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
+  border: 3px solid #F0EFF5;
+  border-top: 3px solid #6C5CE7;
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 0.75rem;
-  
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -173,20 +183,21 @@ const ProcessingSpinner = styled.div`
 
 const ProcessingText = styled.p`
   font-size: 1rem;
-  color: #333;
+  color: #2D3436;
   margin-bottom: 0.4rem;
+  font-weight: 500;
 `;
 
 const ProcessingSubtext = styled.p`
-  color: #666;
+  color: #B2BEC3;
   font-size: 0.85rem;
 `;
 
 const ResultsSection = styled(motion.div)`
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 1px solid #E8E6F0;
 `;
 
 const ResultsGrid = styled.div`
@@ -205,30 +216,32 @@ const ImageCard = styled.div`
 `;
 
 const ImageTitle = styled.h3`
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #333;
+  color: #2D3436;
   margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 `;
 
 const ImageContainer = styled.div`
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
+  border: 1px solid #E8E6F0;
+  border-radius: 12px;
   padding: 0.5rem;
   margin-bottom: 0.75rem;
-  background: #f8f9fa;
+  background: #FAFAFE;
   max-width: 400px;
   margin-left: auto;
   margin-right: auto;
+  overflow: hidden;
 `;
 
 const ProcessedImage = styled.img`
   max-width: 100%;
-  max-height: 300px;
+  max-height: 340px;
   width: auto;
   height: auto;
-  border-radius: 6px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
   object-fit: contain;
 `;
 
@@ -240,107 +253,114 @@ const ActionButtons = styled.div`
 `;
 
 const Button = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
+  padding: 0.65rem 1.25rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   text-decoration: none;
-  
+
   &.primary {
-    background: #667eea;
+    background: #6C5CE7;
     color: white;
-    
+    box-shadow: 0 2px 8px rgba(108, 92, 231, 0.25);
+
     &:hover {
-      background: #764ba2;
+      background: #5A4BD1;
       transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(108, 92, 231, 0.35);
     }
   }
-  
+
   &.secondary {
-    background: #e9ecef;
-    color: #333;
-    
+    background: transparent;
+    color: #636E72;
+    border: 1.5px solid #E8E6F0;
+
     &:hover {
-      background: #dee2e6;
-      transform: translateY(-1px);
+      border-color: #6C5CE7;
+      color: #6C5CE7;
+      background: rgba(108, 92, 231, 0.04);
     }
   }
-  
+
   &.success {
-    background: #28a745;
+    background: #00B894;
     color: white;
-    
+
     &:hover {
-      background: #218838;
+      background: #00A381;
       transform: translateY(-1px);
     }
   }
-  
+
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
+    transform: none !important;
   }
 `;
 
 const DownloadLink = styled.a`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  background: #28a745;
+  padding: 0.65rem 1.25rem;
+  background: #00B894;
   color: white;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   text-decoration: none;
-  transition: all 0.3s ease;
-  
+  transition: all 0.2s ease;
+
   &:hover {
-    background: #218838;
+    background: #00A381;
     transform: translateY(-1px);
   }
 `;
 
 const TextPromptSection = styled.div`
   margin-bottom: 1.5rem;
-  
+
   label {
     display: block;
     font-weight: 600;
-    color: #333;
+    color: #2D3436;
     margin-bottom: 0.4rem;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
-  
+
   textarea {
     width: 100%;
-    padding: 0.6rem;
-    border: 2px solid #e9ecef;
-    border-radius: 6px;
+    padding: 0.75rem;
+    border: 1.5px solid #E8E6F0;
+    border-radius: 10px;
     font-size: 0.9rem;
     font-family: inherit;
     resize: vertical;
-    min-height: 70px;
-    transition: border-color 0.3s ease;
-    
+    min-height: 80px;
+    transition: all 0.2s ease;
+    color: #2D3436;
+
+    &::placeholder { color: #B2BEC3; }
     &:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: #6C5CE7;
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.08);
     }
   }
-  
+
   .char-count {
     text-align: right;
     font-size: 0.75rem;
-    color: #666;
-    margin-top: 0.2rem;
+    color: #B2BEC3;
+    margin-top: 0.25rem;
   }
 `;
 
@@ -359,18 +379,18 @@ const FabricImagesTitle = styled.h4`
 `;
 
 const FabricDropzone = styled.div`
-  border: 2px dashed #667eea;
-  border-radius: 8px;
+  border: 2px dashed ${props => props.isDragActive ? '#6C5CE7' : '#E8E6F0'};
+  border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.isDragActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
+  background: ${props => props.isDragActive ? 'rgba(108, 92, 231, 0.06)' : '#FAFAFE'};
   margin-bottom: 0.75rem;
-  
+
   &:hover {
-    border-color: #764ba2;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #A29BFE;
+    background: rgba(108, 92, 231, 0.04);
   }
 `;
 
@@ -383,10 +403,10 @@ const FabricImagesGrid = styled.div`
 
 const FabricImageCard = styled.div`
   position: relative;
-  border: 2px solid #e9ecef;
-  border-radius: 6px;
+  border: 1px solid #E8E6F0;
+  border-radius: 10px;
   overflow: hidden;
-  background: #f8f9fa;
+  background: #FAFAFE;
 `;
 
 const FabricImage = styled.img`
@@ -418,6 +438,97 @@ const RemoveFabricButton = styled.button`
   }
 `;
 
+const VideoSection = styled(motion.div)`
+  margin-top: 2rem;
+  background: linear-gradient(180deg, #1A1A2E 0%, #16213E 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+`;
+
+const VideoSectionTitle = styled.h3`
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+`;
+
+const VideoGeneratingState = styled.div`
+  color: rgba(255,255,255,0.75);
+  font-size: 0.9rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const VideoSpinner = styled.div`
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top: 3px solid #A29BFE;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 0.8s linear infinite;
+  @keyframes spin { to { transform: rotate(360deg); } }
+`;
+
+const StyledVideo = styled.video`
+  max-width: 100%;
+  max-height: 560px;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+`;
+
+const VideoOptionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+`;
+
+const VideoOptionLabel = styled.label`
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const VideoOptionSelect = styled.select`
+  padding: 0.35rem 0.6rem;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  &:focus { outline: none; border-color: #667eea; }
+`;
+
+const VideoDownloadLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+  &:hover { background: rgba(255,255,255,0.22); }
+`;
+
 const WorkflowStep = styled.div`
   display: flex;
   align-items: center;
@@ -425,12 +536,12 @@ const WorkflowStep = styled.div`
   gap: 0.75rem;
   margin: 1.5rem 0;
   padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: #F8F9FE;
+  border-radius: 10px;
 `;
 
 const StepArrow = styled.div`
-  color: #667eea;
+  color: #6C5CE7;
   font-size: 1.2rem;
 `;
 
@@ -448,6 +559,54 @@ const DesignWorkflow = () => {
   });
   const [textPrompt, setTextPrompt] = useState('');
   const [fabricImages, setFabricImages] = useState([]);
+  const [videoJobId, setVideoJobId] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoOptions, setVideoOptions] = useState({ style: 'elegant', occasion: 'runway', aspect_ratio: '9:16' });
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoJobId) return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fastapi.get(`/api/v1/video/status/${videoJobId}`);
+        if (res.data.status === 'done') {
+          clearInterval(pollRef.current);
+          setVideoJobId(null);
+          setIsGeneratingVideo(false);
+          setVideoUrl(`http://localhost:3001${res.data.video_url}`);
+          toast.success('Fashion shoot video ready!');
+        } else if (res.data.status === 'failed') {
+          clearInterval(pollRef.current);
+          setVideoJobId(null);
+          setIsGeneratingVideo(false);
+          toast.error(`Video generation failed: ${res.data.error}`);
+        }
+      } catch (err) {
+        console.error('Error polling video status:', err);
+      }
+    }, 5000);
+    return () => clearInterval(pollRef.current);
+  }, [videoJobId]);
+
+  const animateDesign = async (imagePath) => {
+    setIsGeneratingVideo(true);
+    setVideoUrl(null);
+    try {
+      const res = await fastapi.post('/api/v1/video/generate', {
+        image_path: imagePath,
+        aspect_ratio: videoOptions.aspect_ratio,
+        duration_seconds: 8,
+        style: videoOptions.style,
+        occasion: videoOptions.occasion,
+      });
+      setVideoJobId(res.data.job_id);
+      toast.info('Fashion shoot generating... this takes ~2 minutes', { autoClose: 8000 });
+    } catch (err) {
+      setIsGeneratingVideo(false);
+      toast.error('Failed to start video generation');
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -891,15 +1050,99 @@ const DesignWorkflow = () => {
                   alt="Final Product"
                 />
               </ImageContainer>
-              <DownloadLink
-                href={getImageUrl(results.finalImage)}
-                download="final-product.png"
-              >
-                <FiDownload />
-                Download Final
-              </DownloadLink>
+              <ActionButtons>
+                <DownloadLink
+                  href={getImageUrl(results.finalImage)}
+                  download="final-product.png"
+                >
+                  <FiDownload />
+                  Download Final
+                </DownloadLink>
+              </ActionButtons>
+              <VideoOptionsRow>
+                <VideoOptionLabel>
+                  Style
+                  <VideoOptionSelect
+                    value={videoOptions.style}
+                    onChange={e => setVideoOptions(v => ({ ...v, style: e.target.value }))}
+                    disabled={isGeneratingVideo}
+                  >
+                    <option value="elegant">Elegant</option>
+                    <option value="editorial">Editorial</option>
+                    <option value="street">Street</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="bold">Bold</option>
+                  </VideoOptionSelect>
+                </VideoOptionLabel>
+                <VideoOptionLabel>
+                  Occasion
+                  <VideoOptionSelect
+                    value={videoOptions.occasion}
+                    onChange={e => setVideoOptions(v => ({ ...v, occasion: e.target.value }))}
+                    disabled={isGeneratingVideo}
+                  >
+                    <option value="runway">Runway</option>
+                    <option value="studio">Studio</option>
+                    <option value="street">Street</option>
+                    <option value="editorial">Editorial</option>
+                    <option value="lookbook">Lookbook</option>
+                  </VideoOptionSelect>
+                </VideoOptionLabel>
+                <VideoOptionLabel>
+                  Aspect Ratio
+                  <VideoOptionSelect
+                    value={videoOptions.aspect_ratio}
+                    onChange={e => setVideoOptions(v => ({ ...v, aspect_ratio: e.target.value }))}
+                    disabled={isGeneratingVideo}
+                  >
+                    <option value="9:16">9:16 Portrait</option>
+                    <option value="16:9">16:9 Landscape</option>
+                    <option value="1:1">1:1 Square</option>
+                  </VideoOptionSelect>
+                </VideoOptionLabel>
+                <Button
+                  className="primary"
+                  style={{ alignSelf: 'flex-end' }}
+                  onClick={() => animateDesign(results.finalImage)}
+                  disabled={isGeneratingVideo}
+                >
+                  <FiVideo />
+                  {isGeneratingVideo ? 'Generating Shoot...' : 'Create Fashion Shoot'}
+                </Button>
+              </VideoOptionsRow>
             </ImageCard>
           </ResultsGrid>
+
+          {(isGeneratingVideo || videoUrl) && (
+            <VideoSection
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <VideoSectionTitle>
+                <FiVideo />
+                Fashion Model Shoot
+              </VideoSectionTitle>
+              {isGeneratingVideo && !videoUrl && (
+                <VideoGeneratingState>
+                  <VideoSpinner />
+                  <span>Veo 3.1 is generating your fashion shoot video...</span>
+                  <span style={{ fontSize: '0.78rem', opacity: 0.6 }}>Usually takes 1–2 minutes</span>
+                </VideoGeneratingState>
+              )}
+              {videoUrl && (
+                <>
+                  <StyledVideo controls autoPlay loop>
+                    <source src={videoUrl} type="video/mp4" />
+                  </StyledVideo>
+                  <VideoDownloadLink href={videoUrl} download="fashion-shoot.mp4">
+                    <FiDownload />
+                    Download Video
+                  </VideoDownloadLink>
+                </>
+              )}
+            </VideoSection>
+          )}
           
           {results.fabricImages && results.fabricImages.length > 0 && (
             <div style={{ marginTop: '1.5rem' }}>

@@ -2,106 +2,110 @@ import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { toast } from 'react-toastify';
-import { FiUpload, FiGrid, FiDownload, FiRefreshCw } from 'react-icons/fi';
+import { FiUpload, FiRefreshCw, FiClock } from 'react-icons/fi';
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #f8f9fa;
-  padding: 2rem 0;
+  background: #F8F9FE;
+  padding: 2rem 0 3rem;
 `;
 
 const Container = styled.div`
-  max-width: 1200px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
 `;
 
 const PageTitle = styled.h1`
   text-align: center;
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 1rem;
+  color: #2D3436;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
 `;
 
 const PageSubtitle = styled.p`
   text-align: center;
-  color: #666;
-  font-size: 1.1rem;
-  margin-bottom: 3rem;
+  color: #636E72;
+  font-size: 1.05rem;
+  margin-bottom: 2.5rem;
 `;
 
 const UploadSection = styled(motion.div)`
   background: white;
   border-radius: 16px;
-  padding: 3rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  border: 1px solid #E8E6F0;
   margin-bottom: 2rem;
 `;
 
 const Dropzone = styled.div`
-  border: 2px dashed #667eea;
-  border-radius: 12px;
-  padding: 3rem;
+  border: 2px dashed ${props => props.isDragActive ? '#6C5CE7' : '#E8E6F0'};
+  border-radius: 16px;
+  padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.isDragActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
-  
+  background: ${props => props.isDragActive ? 'rgba(108, 92, 231, 0.06)' : '#FAFAFE'};
+
   &:hover {
-    border-color: #764ba2;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #A29BFE;
+    background: rgba(108, 92, 231, 0.04);
   }
 `;
 
 const UploadIcon = styled.div`
-  font-size: 3rem;
-  color: #667eea;
-  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  color: #6C5CE7;
+  margin-bottom: 0.75rem;
 `;
 
 const UploadText = styled.p`
-  font-size: 1.2rem;
-  color: #333;
+  font-size: 1.05rem;
+  color: #2D3436;
   margin-bottom: 0.5rem;
+  font-weight: 500;
 `;
 
 const UploadHint = styled.p`
-  color: #666;
-  font-size: 0.9rem;
+  color: #B2BEC3;
+  font-size: 0.85rem;
+`;
+
+const ComingSoon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: rgba(108, 92, 231, 0.08);
+  color: #6C5CE7;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 1.5rem auto 0;
+  width: fit-content;
 `;
 
 const Button = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  border: 1.5px solid #E8E6F0;
+  border-radius: 10px;
   font-weight: 600;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 1rem auto;
-  
-  &.primary {
-    background: #667eea;
-    color: white;
-    
-    &:hover {
-      background: #764ba2;
-      transform: translateY(-2px);
-    }
-  }
-  
-  &.secondary {
-    background: #e9ecef;
-    color: #333;
-    
-    &:hover {
-      background: #dee2e6;
-      transform: translateY(-2px);
-    }
+  transition: all 0.2s ease;
+  background: transparent;
+  color: #636E72;
+  margin: 1.5rem auto 0;
+
+  &:hover {
+    border-color: #6C5CE7;
+    color: #6C5CE7;
   }
 `;
 
@@ -114,51 +118,45 @@ const BatchProcess = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp']
-    },
-    multiple: true
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp'] },
+    multiple: true,
   });
-
-  const resetProcess = () => {
-    setUploadedFiles([]);
-  };
 
   return (
     <PageContainer>
       <Container>
         <PageTitle>Batch Processing</PageTitle>
         <PageSubtitle>
-          Upload multiple images for batch processing (Coming Soon)
+          Process multiple designs at once with AI-powered batch workflows
         </PageSubtitle>
 
         <UploadSection
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <Dropzone {...getRootProps()} isDragActive={isDragActive}>
             <input {...getInputProps()} />
-            <UploadIcon>
-              <FiUpload />
-            </UploadIcon>
+            <UploadIcon><FiUpload /></UploadIcon>
             <UploadText>
               {isDragActive
                 ? 'Drop the images here...'
-                : 'Drag & drop multiple images here, or click to select'
-              }
+                : 'Drag & drop multiple images here, or click to select'}
             </UploadText>
             <UploadHint>
               Supports JPG, PNG, GIF, BMP (Max 10 files, 10MB each)
             </UploadHint>
           </Dropzone>
-          
+
+          <ComingSoon><FiClock size={14} /> Coming Soon</ComingSoon>
+
           {uploadedFiles.length > 0 && (
-            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-              <p>Selected {uploadedFiles.length} files</p>
-              <Button className="secondary" onClick={resetProcess}>
-                <FiRefreshCw />
-                Clear Selection
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: '#636E72', marginTop: '1rem' }}>
+                {uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''} selected
+              </p>
+              <Button onClick={() => setUploadedFiles([])}>
+                <FiRefreshCw size={14} /> Clear Selection
               </Button>
             </div>
           )}

@@ -146,7 +146,7 @@ class LangGraphFashionAgent:
             
             # Initialize models
             self.trend_model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash-exp",
+                model_name="gemini-2.5-flash",
                 safety_settings={
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
@@ -156,7 +156,7 @@ class LangGraphFashionAgent:
             )
             
             self.image_model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash-image-preview",
+                model_name="gemini-2.5-flash-image",
                 safety_settings={
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,

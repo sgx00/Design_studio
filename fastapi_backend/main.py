@@ -6,11 +6,13 @@ Provides REST API endpoints for trend analysis and design generation
 import os
 import asyncio
 import logging
+import uuid
+import threading
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -27,6 +29,8 @@ import sys
 # Add the parent directory to Python path to import from services
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from services.langgraphFashionAgent import LangGraphFashionAgent
+from video_generator import FashionVideoGenerator
+from virtual_tryon import VirtualTryOn
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +41,21 @@ logger = logging.getLogger(__name__)
 
 # Global agent instance
 fashion_agent: Optional[LangGraphFashionAgent] = None
+
+# In-memory video job store  { job_id: { status, video_url, error } }
+video_jobs: Dict[str, Dict[str, Any]] = {}
+
+# Resolve uploads directory relative to project root
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+
+
+class VideoRequest(BaseModel):
+    image_path: str = Field(..., description="Server-relative path to the garment image, e.g. /uploads/final-xxx.png")
+    prompt: Optional[str] = Field(None, description="Custom video prompt (optional)")
+    aspect_ratio: str = Field("9:16", description="9:16 for portrait, 16:9 for landscape")
+    duration_seconds: int = Field(8, ge=5, le=8)
+    style: str = Field("elegant", description="Visual style, e.g. elegant, editorial, street")
+    occasion: str = Field("runway", description="Setting, e.g. runway, studio, street")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -442,6 +461,117 @@ async def general_exception_handler(request, exc):
             "timestamp": datetime.now().isoformat()
         }
     )
+
+@app.post("/api/v1/video/generate")
+async def generate_fashion_video(request: VideoRequest):
+    """
+    Start a Veo 3.1 image-to-video fashion shoot generation.
+    Returns a job_id immediately; poll /api/v1/video/status/{job_id} for progress.
+    """
+    # Resolve image path to an absolute path on disk
+    rel_path = request.image_path.lstrip("/")  # e.g. uploads/final-xxx.png
+    abs_image_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', rel_path))
+
+    if not os.path.exists(abs_image_path):
+        raise HTTPException(status_code=404, detail=f"Image not found: {request.image_path}")
+
+    job_id = str(uuid.uuid4())
+    video_jobs[job_id] = {"status": "processing", "video_url": None, "error": None}
+    logger.info(f"Video job {job_id} started for image: {abs_image_path}")
+
+    def run_generation():
+        try:
+            generator = FashionVideoGenerator()
+            video_path = generator.generate(
+                image_path=abs_image_path,
+                output_dir=UPLOADS_DIR,
+                options={
+                    "prompt": request.prompt,
+                    "aspect_ratio": request.aspect_ratio,
+                    "duration_seconds": request.duration_seconds,
+                    "style": request.style,
+                    "occasion": request.occasion,
+                },
+            )
+            video_filename = os.path.basename(video_path)
+            video_jobs[job_id]["status"] = "done"
+            video_jobs[job_id]["video_url"] = f"/uploads/{video_filename}"
+            logger.info(f"Video job {job_id} complete: {video_filename}")
+        except Exception as e:
+            logger.error(f"Video job {job_id} failed: {e}")
+            video_jobs[job_id]["status"] = "failed"
+            video_jobs[job_id]["error"] = str(e)
+
+    thread = threading.Thread(target=run_generation, daemon=True)
+    thread.start()
+
+    return {"success": True, "job_id": job_id, "message": "Video generation started. Poll status endpoint for progress."}
+
+
+@app.get("/api/v1/video/status/{job_id}")
+async def get_video_status(job_id: str):
+    """Poll the status of a video generation job."""
+    job = video_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"success": True, "job_id": job_id, **job}
+
+
+# ─── Virtual Try-On ──────────────────────────────────────────────────────────
+
+@app.post("/api/v1/tryon")
+async def virtual_try_on(
+    person_image: UploadFile = File(..., description="Photo of the person"),
+    garment_image: UploadFile = File(..., description="Garment / clothing image"),
+    style: str = Form("", description="Photography style: editorial, lookbook, campaign, street"),
+    background: str = Form("studio", description="Background: studio, original, runway, street, outdoor"),
+):
+    """
+    Composite a garment onto a person using Gemini multimodal image generation.
+    Returns the URL of the try-on result image.
+    """
+    ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
+
+    if person_image.content_type not in ALLOWED_MIME:
+        raise HTTPException(status_code=400, detail="person_image must be JPEG, PNG, or WebP")
+    if garment_image.content_type not in ALLOWED_MIME:
+        raise HTTPException(status_code=400, detail="garment_image must be JPEG, PNG, or WebP")
+
+    person_bytes = await person_image.read()
+    garment_bytes = await garment_image.read()
+
+    if len(person_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="person_image exceeds 10 MB limit")
+    if len(garment_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="garment_image exceeds 10 MB limit")
+
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        tryon = VirtualTryOn()
+        output_path = await loop.run_in_executor(
+            None,
+            lambda: tryon.try_on(
+                person_image_bytes=person_bytes,
+                garment_image_bytes=garment_bytes,
+                person_mime=person_image.content_type,
+                garment_mime=garment_image.content_type,
+                output_dir=UPLOADS_DIR,
+                style=style,
+                background=background,
+            ),
+        )
+        filename = os.path.basename(output_path)
+        logger.info(f"Try-on complete: {filename}")
+        return {
+            "success": True,
+            "result_url": f"/uploads/{filename}",
+            "filename": filename,
+        }
+    except Exception as e:
+        logger.error(f"Try-on failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Try-on generation failed: {str(e)}")
+
 
 if __name__ == "__main__":
     # Run the FastAPI application

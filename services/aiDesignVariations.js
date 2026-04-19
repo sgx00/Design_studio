@@ -9,18 +9,18 @@ class AIDesignVariations {
     if (!process.env.GOOGLE_API_KEY) {
       console.warn('Warning: GOOGLE_API_KEY environment variable is not set. AI design variations will not work.');
       this.ai = null;
-      this.model = 'gemini-2.5-flash-image-preview';
+      this.model = 'gemini-2.5-flash-image';
       return;
     }
 
     try {
       // Initialize GoogleGenAI
       this.ai = new GoogleGenAI(process.env.GOOGLE_API_KEY);
-      this.model = 'gemini-2.5-flash-image-preview';
+      this.model = 'gemini-2.5-flash-image';
     } catch (error) {
       console.error('Error initializing GoogleGenAI:', error.message);
       this.ai = null;
-      this.model = 'gemini-2.5-flash-image-preview';
+      this.model = 'gemini-2.5-flash-image';
     }
 
     // Set up generation config

@@ -1,18 +1,3 @@
-# Deployment configs (local only)
-vercel.json
-railway.json
-DEPLOYMENT_GUIDE.md
-DEPLOYMENT_SIMPLE.md
-
-# Test files (local only)
-test-trend-apis.js
-test_enhanced_trend_analysis.py
-test_fastapi_integration.js
-test_improved_image_generation.py
-test_langgraph_agent.py
-test_langgraph_integration.js
-test_simple_fashion_agent.py
-
 # Dependencies
 node_modules/
 npm-debug.log*
